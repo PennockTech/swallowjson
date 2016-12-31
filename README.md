@@ -1,6 +1,8 @@
 swallowjson
 ===========
 
+[![Continuous Integration](https://secure.travis-ci.org/PennockTech/swallowjson.svg?branch=master)](http://travis-ci.org/PennockTech/swallowjson)
+
 The `swallowjson` Golang library provides a simple-to-use support function to
 use to implement an interface method in your type, to aid in JSON decoding.
 

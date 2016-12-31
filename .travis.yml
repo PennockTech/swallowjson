@@ -1,0 +1,49 @@
+language: go
+
+# Be explicit about not needing sudo, so that Travis will use container-based
+# infrastructure for our jobs, always, fewer heuristics.
+sudo: false
+
+#env:
+#  global:
+#    - secure: ""
+#    # Need: COVERALLS_TOKEN
+
+matrix:
+  allow_failures:
+    - go: tip
+  fast_finish: true
+  include:
+    - go: 1.7.3
+#     env: UPLOAD_COVERAGE=true
+    - go: 1.6
+    - go: tip
+
+branches:
+  except:
+    - /^(?:exp|wip)(?:[/_-].*)?$/
+
+go_import_path: go.pennock.tech/swallowjson
+
+install:
+  - git --version
+  - old_remote="$(git config --get remote.origin.url)"; git config remote.origin.url "${old_remote%.git}"
+  - git config --get remote.origin.url
+  - go get -t -v -u ./...
+  - test "${UPLOAD_COVERAGE:-false}" != "true" || go get github.com/mattn/goveralls
+
+script:
+  - go vet ./...
+  - go test -v ./...
+  - test "${UPLOAD_COVERAGE:-false}" != "true" || ./CoverTest.sh
+
+# after_script:
+#   - test "${UPLOAD_COVERAGE:-false}" != "true" || goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+
+notifications:
+  slack:
+    on_success: always
+    rooms:
+      secure: "iTnt5AWT//91PQNU8cClFAsLUai0TEEYzW7omXVs0Z1MPR4xpDuGPMlCCCjXIC2E2NQlE+rL5dniC2F9gYf88XQkgqfhpLNSbuEpZO4FPOKtnam3E4ldSOLjKtyxLkC6NfNSjsn6h4TkqCSlYRF5R4O5cL4xu7+p9Q3yaBKeYhjWZEjmjw67X7uTQfTJP/057VjH/GVNFUIVbhnFanNUVYETK4gQ1OPhPR3XWlnJ0U7lD6wIaC+NDi/+w+6kKbF6gT6UbU0Y0HK2R1XBpUA8FeGtKzxQTmRja3g4udZZ4LfjMZLP5FjmbMSZubv7k+MMttvesCt3wMXY4Q11atEfUN8hsBGgxQdA0JlM63uAH5qcjp1rhexbdB//BkQuPPLWHTCYO1R6Ry4WkabyhjFbPbr2pisXqWyMkbOTtXfdRgrRXkdhcyWw9kjLtuaBMfY1STF8IEOj38oy3GmDz2b0tUzf+hXN01vRsbGojB6YDnCqavKpjFy5MNquwLhxwmIWj7lkbIexOiRUAIMJZOQNBnFF8PA2G/Lu4kjNJ7TDzewg/3tBJMV7fjn6pfSPdKQwoQXoHBWhiyRIM/lUQSQK0dDvSNU5tYpHv7/FRqVIJ2SKjlyuvMegA0U/4XR47bh+UV63GuTm0AKcEZYTNmMSIoKpNi/n/rJHQh/1Atc5A7c="
+
+# vim: set sw=2 et :
