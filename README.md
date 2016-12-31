@@ -24,6 +24,17 @@ func (mt *MyType) UnmarshalJSON(raw []byte) error {
 }
 ```
 
+You can then decode as normal for Golang, letting the JSON decoder dispatch to
+your overridden `UnmarshalJSON` method whenever it expects to decode a
+`MyType` (whether at the top-level, or nested inside other types, etc):
+
+```go
+var myData MyType
+if err := json.Unmarshal(rawBytes, &myData); err != nil {
+	processError(err)
+}
+```
+
 When invoked on `mt`, which should already exist as a struct,
 `swallowjson.UnmarshalWith` will populate `Foo` and `Bar` from JSON fields
 `foo` and `bar` respectively, per normal Golang decoding rules.  But if the
@@ -31,8 +42,9 @@ JSON also contains fields `baz` and `bat` then those will end up as keys,
 holding their child data, in the `Rest` map.
 
 This library was written as a fairly quick proof-of-concept for a friend; I've
-no current use for it, so have not spent time on tests.  The library is
-released in the hopes that it might prove useful to others.
+no current use for it, so this has only rudimentary tests and has not seen
+heavy production usage to battle-test it.
+The library is released in the hopes that it might prove useful to others.
 
 Behavior notes:
 
@@ -44,6 +56,9 @@ Behavior notes:
   implement that case-insensitivity.
 * The `Rest` map will be created on-demand; if no unexpected keys are seen and
   the map is `nil` going in, then it will still be `nil` afterwards.
+* The `Rest` map can have arbitrary value types, but if the content won't
+  parse then you'll get an error.  Sensible choices for generic usage include
+  `interface{}` and `json.RawMessage`.
 
 Canonical import path is: `go.pennock.tech/swallowjson`
 

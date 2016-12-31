@@ -97,7 +97,7 @@ func UnmarshalWith(target interface{}, spilloverName string, raw []byte) error {
 		sections []string
 		jsonName string
 	)
-	for i := 0; i < me.Type().NumField(); i++ {
+	for i := 0; i < met.NumField(); i++ {
 		sf = met.Field(i)
 		if tag = sf.Tag.Get("json"); tag != "" {
 			sections = strings.Split(tag, ",")
@@ -126,12 +126,19 @@ func UnmarshalWith(target interface{}, spilloverName string, raw []byte) error {
 
 		// dec.Token() skips over colons!
 
-		var v interface{}
-		err = dec.Decode(&v)
+		var wantType reflect.Type
+		if fieldIndex, ok := fieldsLookup[key]; ok {
+			wantType = met.Field(fieldIndex).Type
+		} else {
+			wantType = spillValueType
+		}
+
+		vvl := reflect.MakeSlice(reflect.SliceOf(wantType), 1, 1)
+		vv := vvl.Index(0)
+		err = dec.Decode(vv.Addr().Interface())
 		if err != nil {
 			return err
 		}
-		vv := reflect.ValueOf(v)
 
 		if fieldIndex, ok := fieldsLookup[key]; ok {
 			me.Field(fieldIndex).Set(vv.Convert(met.Field(fieldIndex).Type))
