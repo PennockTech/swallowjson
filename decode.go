@@ -16,7 +16,7 @@ keys in a JSON object which do not correspond to a known field in a
 	}
 
 */
-package swallowjson
+package swallowjson // import "go.pennock.tech/swallowjson"
 
 import (
 	"bytes"
