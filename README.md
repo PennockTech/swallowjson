@@ -36,13 +36,18 @@ released in the hopes that it might prove useful to others.
 
 Behavior notes:
 
-* The JSON library has a bunch of legacy case-insensitivity handling; this is
-  a new API with no need to preserve backwards behavior there, so I didn't
-  implement that.
+* The Golang [encoding/json][] library has a bunch of legacy
+  case-insensitivity handling in the default unmarshaller; while swallowjson
+  builds upon that library (it uses `json.NewDecoder()` under the hood) our
+  API is a new API, implemented in new code and is not a drop-in replacement.
+  Thus there is no need to preserve backwards behavior here, so I didn't
+  implement that case-insensitivity.
 * The `Rest` map will be created on-demand; if no unexpected keys are seen and
   the map is `nil` going in, then it will still be `nil` afterwards.
 
 
 --
-Copyright © 2016 Pennock Tech, LLC
+Copyright © 2016 Pennock Tech, LLC  
 Licensed per [LICENSE.txt](./LICENSE.txt)
+
+[encoding/json]: https://golang.org/pkg/encoding/json/
