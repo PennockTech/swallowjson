@@ -45,6 +45,7 @@ Behavior notes:
 * The `Rest` map will be created on-demand; if no unexpected keys are seen and
   the map is `nil` going in, then it will still be `nil` afterwards.
 
+Canonical import path is: `go.pennock.tech/swallowjson`
 
 --
 Copyright © 2016 Pennock Tech, LLC  
