@@ -1,6 +1,6 @@
 /*
 Package swallowjson provides a utility function for implementing the
-encoding/json.Unmarshaler interface's UnmarshalJSON method to decode
+encoding/json.Unmarshaler interface's UnmarshalJSON method to decode,
 without discarding unknown keys.  The "swallow" concept says that any
 keys in a JSON object which do not correspond to a known field in a
 (Golang) struct should not be discarded but instead put into a map.
@@ -15,50 +15,77 @@ keys in a JSON object which do not correspond to a known field in a
 		return swallowjson.UnmarshalWith(mt, "Rest", raw)
 	}
 
+The struct field to swallow fields not explicitly named must be a
+map keyed by string.  The type of map values is handled reliably, returning a
+JSON error if unsuitable.
+Common types to use might be `interface{}` or `json.RawMessage`.
+
+Errors are either of type swallowjson.SwallowError or are bubbled through from
+the json or reflect packages.
 */
 package swallowjson // import "go.pennock.tech/swallowjson"
 
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
 )
 
-var ErrGivenNonStringKey = errors.New("spillover: given object with non-string key")
-var ErrMalformedJSON = errors.New("spillover: given malformed JSON")
-var ErrMissingSpilloverField = errors.New("spillover: target struct missing specified spillover field")
-var ErrNotGivenMutable = errors.New("spillover: not given something which we can assign to")
-var ErrNotGivenStruct = errors.New("spillover: not given a struct in the raw stream")
-var ErrNotStructHolder = errors.New("spillover: holder is not a struct")
-var ErrSpillNotRightMap = errors.New("spillover: target's spillover field is not a map[string]interface{}")
-var ErrUnsetableSpilloverField = errors.New("spillover: target struct's spillover field not assignable")
+// SwallowError is the type of all errors generated within the swallowjson package.
+// Errors will either be of this type, or bubbled through.
+// The string representation of the error is guaranteed to start "swallowjson:".
+type SwallowError struct {
+	s   string
+	aux string
+}
 
-func swallowRuneToken(decoder *json.Decoder, expect rune, failExpect error) error {
+func (se SwallowError) Error() string {
+	s := "swallowjson: " + se.s
+	if se.aux != "" {
+		s += ": " + se.aux
+	}
+	return s
+}
+
+// These errors may be returned by UnmarshalWith.
+var (
+	ErrGivenNonStringKey       = SwallowError{s: "given object with non-string key"}
+	ErrMalformedJSON           = SwallowError{s: "given malformed JSON"}
+	ErrMissingSpilloverField   = SwallowError{s: "target struct missing specified spillover field"}
+	ErrNotGivenMutable         = SwallowError{s: "not given something which we can assign to"}
+	ErrNotGivenStruct          = SwallowError{s: "not given a struct in the raw stream"}
+	ErrNotStructHolder         = SwallowError{s: "holder is not a struct"}
+	ErrSpillNotRightMap        = SwallowError{s: "target's spillover field is not a map[string]interface{}"}
+	ErrUnsetableSpilloverField = SwallowError{s: "target struct's spillover field not assignable"}
+)
+
+func swallowRuneToken(decoder *json.Decoder, expect rune, failExpect SwallowError) error {
 	t, err := decoder.Token()
 	if err != nil {
 		return err
 	}
 	if t != json.Delim(expect) {
-		fmt.Printf("Expected %q got %q\n", expect, t)
-		return failExpect
+		e := SwallowError{
+			s:   failExpect.s,
+			aux: fmt.Sprintf("expected %q got %q", expect, t),
+		}
+		return e
 	}
 	return nil
 }
 
 // TODO:
-// * write tests
 // * write more examples
-// * reconsider error types
 // * check if we really should panic on the cases where we do
 // * handle various linters etc
 
 // UnmarshalWith is used for implementing UnmarshalJSON methods to satisfy
 // the encoding/json.Unmarshaler interface.  The method becomes a one-liner
-// returning the result of calling this function, supplying only the name of
-// the field which should swallow unknown JSON fields.
+// returning the result of calling this function, supplying in addition to the
+// object and input only the name of the field which should swallow unknown
+// JSON fields.
 func UnmarshalWith(target interface{}, spilloverName string, raw []byte) error {
 	me := reflect.ValueOf(target)
 	if me.Kind() != reflect.Ptr {
