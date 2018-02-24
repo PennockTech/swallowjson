@@ -67,11 +67,10 @@ func swallowRuneToken(decoder *json.Decoder, expect rune, failExpect SwallowErro
 		return err
 	}
 	if t != json.Delim(expect) {
-		e := SwallowError{
+		return SwallowError{
 			s:   failExpect.s,
 			aux: fmt.Sprintf("expected %q got %q", expect, t),
 		}
-		return e
 	}
 	return nil
 }
@@ -177,9 +176,6 @@ func UnmarshalWith(target interface{}, spilloverName string, raw []byte) error {
 			spillInto.SetMapIndex(kv, vv.Convert(spillValueType))
 		}
 	}
-	if err := swallowRuneToken(dec, '}', ErrMalformedJSON); err != nil {
-		return err
-	}
 
-	return nil
+	return swallowRuneToken(dec, '}', ErrMalformedJSON)
 }
