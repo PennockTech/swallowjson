@@ -2,6 +2,9 @@ package swallowjson
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -30,6 +33,12 @@ type foo4 struct {
 	Rest map[string]int `json:"-"`
 }
 
+type foo5 struct {
+	Foo    string `json:"foo"`
+	Direct bool
+	Rest   map[string]interface{} `json:"-"`
+}
+
 func (f *foo1) UnmarshalJSON(raw []byte) error { return UnmarshalWith(f, "Rest", raw) }
 func (f *foo3) UnmarshalJSON(raw []byte) error { return UnmarshalWith(f, "Rest", raw) }
 func (f *foo4) UnmarshalJSON(raw []byte) error { return UnmarshalWith(f, "Rest", raw) }
@@ -51,6 +60,10 @@ const rawD = `{
 }
 `
 
+const rawE = `{
+    "foo": "alpha", "bar": 42, "Direct": true, "more": "wibble", "num": 3.14159
+}`
+
 func TestDecode(t *testing.T) {
 	var (
 		f1a     foo1
@@ -63,6 +76,7 @@ func TestDecode(t *testing.T) {
 		f3d     foo3
 		f3aTime time.Time
 		f4a     foo4
+		f5a     foo5
 	)
 	if err := json.Unmarshal([]byte(rawA), &f1a); err != nil {
 		t.Error("foo1/a decode failed", err)
@@ -88,12 +102,19 @@ func TestDecode(t *testing.T) {
 	if err := json.Unmarshal([]byte(rawD), &f3d); err != nil {
 		t.Error("foo3/d decode failed", err)
 	}
+	if err := json.Unmarshal([]byte(rawE), &f5a); err != nil {
+		t.Error("foo5/e decode failed", err)
+	}
 
 	err := json.Unmarshal([]byte(rawA), &f4a)
 	if err == nil {
 		t.Error("foo4/a should have failed to decode but didn't")
 	} else {
 		t.Logf("foo4/a errored as it should have: %s", err)
+	}
+
+	if t.Failed() {
+		return
 	}
 
 	if f1a.Foo != f2a.Foo {
@@ -137,5 +158,137 @@ func TestDecode(t *testing.T) {
 	if !f3aTime.Equal(f2a.Baz) {
 		t.Errorf("time mismatch direct %v vs RawMessage %v", f2a.Baz, f3aTime)
 	}
+}
 
+func TestUnmarshalFailsCorrectlyBadJSON(t *testing.T) {
+	var f foo1
+
+	for i, entry := range []struct {
+		bad  string
+		jmsg string // via JSON library
+		wmsg string // ours via direct call to UnmarshalWith
+	}{
+		{"alfa", "invalid character 'a' looking for beginning of value", ""},
+		{"foxtrot", "invalid character 'o' in literal false (expecting 'a')", ""},
+		{"[]", `swallowjson: not given a struct in the raw stream: expected '{' got "["`, ""},
+		{`{"foo": 42}`, "json: cannot unmarshal number into Go value of type string", ""},
+		{`{ 42: "foo"}`, "invalid character '4' looking for beginning of object key string", "invalid character '4' "},
+		{`{"foo", 42}`, "invalid character ',' after object key", "expected colon after object key"},
+		{`{`, "unexpected end of JSON input", "EOF"},
+	} {
+		err := json.Unmarshal([]byte(entry.bad), &f)
+		if err == nil {
+			t.Errorf("✗ [%d.J] decode did not fail but should have", i)
+		} else {
+			got := err.Error()
+			if got != entry.jmsg {
+				t.Errorf("✗ [%d.J] decode error was %q but expected %q", i, got, entry.jmsg)
+			} else {
+				t.Logf("✓ [%d.J] decode yielded expected error %q", i, entry.jmsg)
+			}
+		}
+		// Go directly without the protection of the JSON layer, to hit more of our edge-case handling
+		err = UnmarshalWith(&f, "Rest", []byte(entry.bad))
+		if err == nil {
+			t.Errorf("✗ [%d.W] decode did not fail but should have", i)
+		} else {
+			got := err.Error()
+			want := entry.wmsg
+			if want == "" {
+				want = entry.jmsg
+			}
+			if got != want {
+				t.Errorf("✗ [%d.W] decode error was %q but expected %q", i, got, want)
+			} else {
+				t.Logf("✓ [%d.W] decode yielded expected error %q", i, want)
+			}
+		}
+
+	}
+}
+
+func expectError(t *testing.T, label string, err error, emsg interface{}) bool {
+	if err == nil {
+		t.Errorf("✗ %s decode did not error when we expected it to", label)
+		return false
+	}
+	got := err.Error()
+	var match bool
+	var show string
+	switch want := emsg.(type) {
+	case string:
+		match = got == want
+		show = strconv.Quote(want)
+	default:
+		match = err == want
+		show = reflect.TypeOf(want).String()
+	}
+	if match {
+		t.Logf("✓ %s decode got expected error %s", label, show)
+		return true
+	}
+	t.Errorf("✗ %s decode error was %q but expected %s", label, got, show)
+	return false
+}
+
+func labelOf(item interface{}, which rune) string {
+	switch t := item.(type) {
+	case int:
+		return fmt.Sprintf("[%d.%c]", t, which)
+	case string:
+		return fmt.Sprintf("%q.%c", t, which)
+	default:
+		panic("bad type")
+	}
+}
+
+func failEachWay(t *testing.T, index interface{}, obj interface{}, data string, jmsg string, wmsg interface{}) {
+	if wmsg == nil {
+		wmsg = jmsg
+	}
+	err := json.Unmarshal([]byte(data), obj)
+	if jmsg != "" || err != nil {
+		expectError(t, labelOf(index, 'J'), err, jmsg)
+	} else if err == nil {
+		t.Logf("✓ %s decode did not error", labelOf(index, 'J'))
+	}
+	err = UnmarshalWith(obj, "Rest", []byte(data))
+	expectError(t, labelOf(index, 'W'), err, wmsg)
+}
+
+func TestFailsCorrectlyBadStruct(t *testing.T) {
+	var (
+		oneItem       foo1
+		sliceItem     []foo1
+		noSpill       struct{}
+		badSpill      struct{ Rest string }
+		badSpillKey   struct{ Rest map[int]json.RawMessage }
+		intSpillValue struct{ Rest map[string]int }
+
+		// For these, if you can see a way to trigger these, please file a bug
+		// with details, because I do want to test them.
+
+		// don't see a way to trigger that the .Elem() [value] is not .CanSet()
+		// so can't trigger ErrUnsetableSpilloverField ?
+
+		// looks like the stateful parsing in json decoder.Token() will never
+		// successfully return a non-string token in the key position of an
+		// object, so can't trigger ErrGivenNonStringKey ?
+	)
+
+	for i, entry := range []struct {
+		obj  interface{}
+		jmsg string      // via JSON library
+		wmsg interface{} // ours via direct call to UnmarshalWith
+	}{
+		{oneItem, "json: Unmarshal(non-pointer swallowjson.foo1)", ErrNotGivenMutable},
+		{sliceItem, "json: Unmarshal(non-pointer []swallowjson.foo1)", ErrNotGivenMutable},
+		{&sliceItem, "json: cannot unmarshal object into Go value of type []swallowjson.foo1", ErrNotStructHolder},
+		{&noSpill, "", ErrMissingSpilloverField},
+		{&badSpill, "", ErrSpillNotRightMap},
+		{&badSpillKey, "", ErrSpillNotRightMap},
+		{&intSpillValue, "", "json: cannot unmarshal string into Go value of type int"},
+	} {
+		failEachWay(t, i, entry.obj, rawE, entry.jmsg, entry.wmsg)
+	}
 }
