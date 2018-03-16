@@ -10,7 +10,7 @@ matrix:
   fast_finish: true
   include:
     - go: 1.10.x
-#     env: UPLOAD_COVERAGE=true
+      env: UPLOAD_COVERAGE=true
     - go: 1.9.x
     - go: stable
     - go: tip
