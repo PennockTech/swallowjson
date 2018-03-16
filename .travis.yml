@@ -4,19 +4,14 @@ language: go
 # infrastructure for our jobs, always, fewer heuristics.
 sudo: false
 
-#env:
-#  global:
-#    - secure: ""
-#    # Need: COVERALLS_TOKEN
-
 matrix:
   allow_failures:
     - go: tip
   fast_finish: true
   include:
-    - go: 1.9.x
     - go: 1.10.x
 #     env: UPLOAD_COVERAGE=true
+    - go: 1.9.x
     - go: stable
     - go: tip
 
@@ -36,10 +31,9 @@ install:
 script:
   - go vet ./...
   - go test -v ./...
-  - test "${UPLOAD_COVERAGE:-false}" != "true" || ./CoverTest.sh
 
-# after_script:
-#   - test "${UPLOAD_COVERAGE:-false}" != "true" || goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+after_script:
+  - test "${UPLOAD_COVERAGE:-false}" != "true" || goveralls -service=travis-ci
 
 notifications:
   slack:
