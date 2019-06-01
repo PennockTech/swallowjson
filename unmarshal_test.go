@@ -164,17 +164,24 @@ func TestUnmarshalFailsCorrectlyBadJSON(t *testing.T) {
 	var f foo1
 
 	for i, entry := range []struct {
-		bad  string
-		jmsg string // via JSON library
-		wmsg string // ours via direct call to UnmarshalWith
+		bad   string
+		jmsg  string   // via JSON library
+		wmsgs []string // ours via direct call to UnmarshalWith; variations allowed
 	}{
-		{"alfa", "invalid character 'a' looking for beginning of value", ""},
-		{"foxtrot", "invalid character 'o' in literal false (expecting 'a')", ""},
-		{"[]", `swallowjson: not given a struct in the raw stream: expected '{' got "["`, ""},
-		{`{"foo": 42}`, "json: cannot unmarshal number into Go value of type string", ""},
-		{`{ 42: "foo"}`, "invalid character '4' looking for beginning of object key string", "invalid character '4' "},
-		{`{"foo", 42}`, "invalid character ',' after object key", "expected colon after object key"},
-		{`{`, "unexpected end of JSON input", "EOF"},
+		// Variations in stdlib have caused test failures when an expected
+		// value lost trailing whitespace, because of how closely swallowjson
+		// wraps stdlib.
+		{"alfa", "invalid character 'a' looking for beginning of value", nil},
+		{"foxtrot", "invalid character 'o' in literal false (expecting 'a')", nil},
+		{"[]", `swallowjson: not given a struct in the raw stream: expected '{' got "["`, nil},
+		{`{"foo": 42}`, "json: cannot unmarshal number into Go value of type string", nil},
+		{`{ 42: "foo"}`, "invalid character '4' looking for beginning of object key string",
+			[]string{
+				"invalid character '4' ",
+				"invalid character '4'",
+			}},
+		{`{"foo", 42}`, "invalid character ',' after object key", []string{"expected colon after object key"}},
+		{`{`, "unexpected end of JSON input", []string{"EOF"}},
 	} {
 		err := json.Unmarshal([]byte(entry.bad), &f)
 		if err == nil {
@@ -193,14 +200,23 @@ func TestUnmarshalFailsCorrectlyBadJSON(t *testing.T) {
 			t.Errorf("✗ [%d.W] decode did not fail but should have", i)
 		} else {
 			got := err.Error()
-			want := entry.wmsg
-			if want == "" {
-				want = entry.jmsg
+			want_any := entry.wmsgs
+			if want_any == nil {
+				want_any = []string{entry.jmsg}
 			}
-			if got != want {
-				t.Errorf("✗ [%d.W] decode error was %q but expected %q", i, got, want)
+			have_matched := false
+			var matched_item string
+			for _, want := range want_any {
+				if got == want {
+					have_matched = true
+					matched_item = want
+					break
+				}
+			}
+			if have_matched {
+				t.Logf("✓ [%d.W] decode yielded expected error %q", i, matched_item)
 			} else {
-				t.Logf("✓ [%d.W] decode yielded expected error %q", i, want)
+				t.Errorf("✗ [%d.W] decode error was %q but expected %q", i, got, want_any[0])
 			}
 		}
 
