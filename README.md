@@ -1,7 +1,7 @@
 swallowjson
 ===========
 
-[![Continuous Integration](https://secure.travis-ci.org/PennockTech/swallowjson.svg?branch=master)](http://travis-ci.org/PennockTech/swallowjson)
+[![Continuous Integration](https://secure.travis-ci.org/PennockTech/swallowjson.svg?branch=main)](http://travis-ci.org/PennockTech/swallowjson)
 [![Documentation](https://godoc.org/go.pennock.tech/swallowjson?status.svg)](https://godoc.org/go.pennock.tech/swallowjson)
 [![Coverage Status](https://coveralls.io/repos/github/PennockTech/swallowjson/badge.svg)](https://coveralls.io/github/PennockTech/swallowjson)
 
