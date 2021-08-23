@@ -45,9 +45,9 @@ When invoked on `mt`, which should already exist as a struct,
 JSON also contains fields `baz` and `bat` then those will end up as keys,
 holding their child data, in the `Rest` map.
 
-This library was written as a fairly quick proof-of-concept for a friend; I've
-no current use for it, so this has only rudimentary tests and has not seen
-heavy production usage to battle-test it.
+This library was written as a fairly quick proof-of-concept for a friend and
+later gained sufficient tests as to be something which can be relied upon as a
+core component, with no other dependencies.
 The library is released in the hopes that it might prove useful to others.
 
 Behavior notes:
