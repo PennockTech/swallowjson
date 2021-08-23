@@ -67,7 +67,7 @@ Behavior notes:
 Canonical import path is: `go.pennock.tech/swallowjson`
 
 ---
-Copyright © 2016 Pennock Tech, LLC  
+Copyright © 2016-2020 Pennock Tech, LLC  
 Licensed per [LICENSE.txt](./LICENSE.txt)
 
 [encoding/json]: https://golang.org/pkg/encoding/json/
