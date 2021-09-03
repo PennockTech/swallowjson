@@ -1,9 +1,9 @@
 swallowjson
 ===========
 
-[![Continuous Integration](https://secure.travis-ci.org/PennockTech/swallowjson.svg?branch=main)](http://travis-ci.org/PennockTech/swallowjson)
+[![Continuous Integration](https://github.com/PennockTech/swallowjson/actions/workflows/pushes.yaml/badge.svg)](https://github.com/PennockTech/swallowjson/actions/workflows/pushes.yaml)
 [![Documentation](https://godoc.org/go.pennock.tech/swallowjson?status.svg)](https://godoc.org/go.pennock.tech/swallowjson)
-[![Coverage Status](https://coveralls.io/repos/github/PennockTech/swallowjson/badge.svg)](https://coveralls.io/github/PennockTech/swallowjson)
+[![Coverage Status](https://coveralls.io/repos/github/PennockTech/swallowjson/badge.svg?branch=main)](https://coveralls.io/github/PennockTech/swallowjson?branch=main)
 
 The `swallowjson` Golang library provides a simple-to-use support function to
 use to implement an interface method in your type, to aid in JSON decoding.
