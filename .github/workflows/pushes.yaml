@@ -28,12 +28,14 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # security posture improvement:
+          persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go }}
 
@@ -51,7 +53,7 @@ jobs:
         # These are independent of how the matrix is setup, or if a matrix is even used.
 
       - name: Go caches
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           # (This bit copied from the actions/setup-go@v2 version)
           # In order:
